@@ -1,16 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createClient } from '@base44/sdk';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, Check, Clock, Crosshair, RotateCcw, Target, Trophy, X } from 'lucide-react';
+import { rounds } from './rounds.js';
 
-const APP_ID = '6a6f961e623a5566b54e62e6';
 const TIME_LIMIT = 20;
-const base44 = createClient({ appId: APP_ID });
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function StartScreen({ count, onStart }) {
+function StartScreen({ onStart }) {
   return (
     <section className="screen start-screen">
       <div className="brand-mark">SWSC</div>
@@ -20,9 +18,9 @@ function StartScreen({ count, onStart }) {
         Test your eye against real defects found during professional snagging inspections.
       </p>
       <div className="start-card">
-        <div><strong>{count}</strong><span>real inspection photos</span></div>
+        <div><strong>{rounds.length}</strong><span>real inspection photos</span></div>
         <div><strong>{TIME_LIMIT}s</strong><span>per round</span></div>
-        <div><strong>100</strong><span>points available</span></div>
+        <div><strong>100</strong><span>points per round</span></div>
       </div>
       <button className="primary-button" onClick={onStart}>
         Start the challenge <ArrowRight size={19} />
@@ -32,7 +30,7 @@ function StartScreen({ count, onStart }) {
   );
 }
 
-function RoundScreen({ round, index, total, score, onComplete, onNext }) {
+function RoundScreen({ round, index, score, onComplete, onNext }) {
   const imageRef = useRef(null);
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
   const [answer, setAnswer] = useState(null);
@@ -56,6 +54,7 @@ function RoundScreen({ round, index, total, score, onComplete, onNext }) {
     const correct = distance <= radius;
     const points = correct ? Math.max(10, Math.round(100 * (1 - distance / radius))) : 0;
     const outcome = { tap, correct, points, timedOut: false };
+
     setAnswer(tap);
     setResult(outcome);
     onComplete(outcome);
@@ -67,12 +66,14 @@ function RoundScreen({ round, index, total, score, onComplete, onNext }) {
       finishRound(null);
       return undefined;
     }
+
     const timer = window.setTimeout(() => setTimeLeft((value) => value - 1), 1000);
     return () => window.clearTimeout(timer);
   }, [answered, finishRound, timeLeft]);
 
   const handleClick = (event) => {
     if (answered || !imageRef.current) return;
+
     const rect = imageRef.current.getBoundingClientRect();
     finishRound({
       x: clamp(((event.clientX - rect.left) / rect.width) * 100, 0, 100),
@@ -81,23 +82,26 @@ function RoundScreen({ round, index, total, score, onComplete, onNext }) {
   };
 
   const status = result?.timedOut ? 'Time is up' : result?.correct ? 'Spot on' : 'Not quite';
+  const displayedScore = score + (result?.points || 0);
 
   return (
     <section className="screen round-screen">
       <header className="round-header">
         <div>
-          <p className="eyebrow">Round {index + 1} of {total}</p>
+          <p className="eyebrow">Round {index + 1} of {rounds.length}</p>
           <h2>{round.title}</h2>
         </div>
         <div className="score-box">
           <span>{answered ? 'Score' : 'Time'}</span>
           <strong className={timeLeft <= 5 && !answered ? 'urgent' : ''}>
-            {answered ? score : `${timeLeft}s`}
+            {answered ? displayedScore : `${timeLeft}s`}
           </strong>
         </div>
       </header>
 
-      <div className="progress"><span style={{ width: `${((index + (answered ? 1 : 0)) / total) * 100}%` }} /></div>
+      <div className="progress">
+        <span style={{ width: `${((index + (answered ? 1 : 0)) / rounds.length) * 100}%` }} />
+      </div>
 
       <div className="photo-frame">
         <img
@@ -109,9 +113,7 @@ function RoundScreen({ round, index, total, score, onComplete, onNext }) {
           referrerPolicy="no-referrer"
         />
 
-        {!answered && (
-          <div className="tap-hint"><Crosshair size={15} /> Tap the snag</div>
-        )}
+        {!answered && <div className="tap-hint"><Crosshair size={15} /> Tap the snag</div>}
 
         {answered && (
           <>
@@ -123,7 +125,10 @@ function RoundScreen({ round, index, total, score, onComplete, onNext }) {
                 width: `${Number(round.defect_radius || 15) * 2}%`,
               }}
             />
-            <div className="marker correct-marker" style={{ left: `${round.defect_x}%`, top: `${round.defect_y}%` }}>
+            <div
+              className="marker correct-marker"
+              style={{ left: `${round.defect_x}%`, top: `${round.defect_y}%` }}
+            >
               <Target size={20} />
             </div>
           </>
@@ -153,7 +158,7 @@ function RoundScreen({ round, index, total, score, onComplete, onNext }) {
             <p>{round.explanation}</p>
           </div>
           <button className="primary-button" onClick={onNext}>
-            {index + 1 === total ? 'See results' : 'Next round'} <ArrowRight size={19} />
+            {index + 1 === rounds.length ? 'See results' : 'Next round'} <ArrowRight size={19} />
           </button>
         </div>
       )}
@@ -161,8 +166,8 @@ function RoundScreen({ round, index, total, score, onComplete, onNext }) {
   );
 }
 
-function ResultsScreen({ score, total, onRestart }) {
-  const maximum = total * 100;
+function ResultsScreen({ score, onRestart }) {
+  const maximum = rounds.length * 100;
   const percent = maximum ? Math.round((score / maximum) * 100) : 0;
   const rating = percent >= 80 ? 'Inspection Expert' : percent >= 50 ? 'Snag Spotter' : 'Homeowner in Training';
 
@@ -173,38 +178,25 @@ function ResultsScreen({ score, total, onRestart }) {
       <h1>{rating}</h1>
       <div className="final-score"><strong>{score}</strong><span>out of {maximum}</span></div>
       <p className="lead">You scored {percent}%. Real defects are often easier to miss than they first appear.</p>
-      <a className="primary-button link-button" href="https://www.southwalessnagging.co.uk" target="_blank" rel="noreferrer">
+      <a
+        className="primary-button link-button"
+        href="https://www.southwalessnagging.co.uk"
+        target="_blank"
+        rel="noreferrer"
+      >
         Book a professional inspection <ArrowRight size={19} />
       </a>
-      <button className="secondary-button" onClick={onRestart}><RotateCcw size={17} /> Play again</button>
+      <button className="secondary-button" onClick={onRestart}>
+        <RotateCcw size={17} /> Play again
+      </button>
     </section>
   );
 }
 
 export default function App() {
-  const [rounds, setRounds] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [phase, setPhase] = useState('start');
   const [index, setIndex] = useState(0);
   const [score, setScore] = useState(0);
-
-  useEffect(() => {
-    base44.entities.SnagRound
-      .filter({ active: true, location_confirmed: true }, 'round_order', 50)
-      .then((items) => {
-        setRounds(items);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError('The game could not load its rounds. Please try again shortly.');
-        setLoading(false);
-      });
-  }, []);
-
-  const currentRound = rounds[index];
-  const roundKey = useMemo(() => currentRound ? `${currentRound.id}-${index}` : 'none', [currentRound, index]);
 
   const start = () => {
     setScore(0);
@@ -217,35 +209,20 @@ export default function App() {
     else setIndex((value) => value + 1);
   };
 
-  if (loading) return <main className="app-shell"><div className="loading-spinner" /><p>Loading Spot the Snag…</p></main>;
-  if (error) return <main className="app-shell"><section className="screen empty-screen"><h1>Unable to load</h1><p>{error}</p></section></main>;
-  if (!rounds.length) {
-    return (
-      <main className="app-shell">
-        <section className="screen empty-screen">
-          <div className="brand-mark">SWSC</div>
-          <h1>Spot the Snag is being prepared</h1>
-          <p>The inspection photographs are loaded. The correct defect locations are being confirmed before the game goes live.</p>
-        </section>
-      </main>
-    );
-  }
-
   return (
     <main className="app-shell">
-      {phase === 'start' && <StartScreen count={rounds.length} onStart={start} />}
-      {phase === 'playing' && currentRound && (
+      {phase === 'start' && <StartScreen onStart={start} />}
+      {phase === 'playing' && (
         <RoundScreen
-          key={roundKey}
-          round={currentRound}
+          key={`${rounds[index].id}-${index}`}
+          round={rounds[index]}
           index={index}
-          total={rounds.length}
           score={score}
           onComplete={(outcome) => setScore((value) => value + outcome.points)}
           onNext={next}
         />
       )}
-      {phase === 'results' && <ResultsScreen score={score} total={rounds.length} onRestart={start} />}
+      {phase === 'results' && <ResultsScreen score={score} onRestart={start} />}
     </main>
   );
 }
