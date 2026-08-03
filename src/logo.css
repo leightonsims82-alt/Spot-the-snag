@@ -1,0 +1,21 @@
+.brand-mark {
+  width: 112px;
+  height: 112px;
+  border: 0;
+  border-radius: 50%;
+  font-size: 0;
+  letter-spacing: 0;
+  background-image: url('https://drive.google.com/thumbnail?id=15uQa_JwNftMZcXcBJdrp2PSAxvXtmUGb&sz=w1000');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  box-shadow: 0 0 0 5px rgba(201, 163, 78, 0.09), 0 16px 38px rgba(0, 0, 0, 0.32);
+}
+
+@media (max-width: 560px) {
+  .brand-mark {
+    width: 96px;
+    height: 96px;
+    margin-bottom: 18px;
+  }
+}
