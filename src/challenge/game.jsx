@@ -13,11 +13,26 @@ import {
 } from 'lucide-react';
 import { rounds } from '../rounds.js';
 import ShareResultButtons from './share.jsx';
-import { BRAND_NAME, LEVELS, clamp, currentMonthlyChallenge } from './config.js';
+import {
+  BRAND_NAME,
+  LEVELS,
+  clamp,
+  createFullChallenge,
+  currentMonthlyChallenge,
+  gameBestKey,
+  readStoredScore,
+  saveBestScore,
+} from './config.js';
+
+function scoreLabel(score, maximum) {
+  return score > 0 ? `${score}/${maximum}` : 'No score yet';
+}
 
 function StartScreen({ levelId, onLevelChange, onStart }) {
   const monthly = useMemo(currentMonthlyChallenge, []);
   const selectedLevel = LEVELS[levelId];
+  const fullBest = readStoredScore(gameBestKey('full', levelId));
+  const monthlyBest = readStoredScore(gameBestKey('monthly', levelId));
 
   return (
     <section className="screen start-screen">
@@ -44,12 +59,13 @@ function StartScreen({ levelId, onLevelChange, onStart }) {
           ))}
         </div>
         <p className="level-description">{selectedLevel.description}</p>
+        <p className="level-best-line">Personal best: {scoreLabel(fullBest, rounds.length * 100)}</p>
       </div>
 
       <div className="start-card">
         <div><strong>{rounds.length}</strong><span>real inspection photos</span></div>
         <div><strong>{selectedLevel.timeLimit}s</strong><span>per round</span></div>
-        <div><strong>100</strong><span>points per round</span></div>
+        <div><strong>{rounds.length * 100}</strong><span>maximum score</span></div>
       </div>
 
       <button className="primary-button" onClick={() => onStart('full')}>
@@ -60,7 +76,11 @@ function StartScreen({ levelId, onLevelChange, onStart }) {
         <Sparkles size={19} />
         <span>
           <strong>{monthly.label} Challenge</strong>
-          <small>Five selected defects, one monthly score</small>
+          <small>
+            {monthlyBest > 0
+              ? `Your best: ${monthlyBest}/${monthly.rounds.length * 100}`
+              : 'Five selected defects with one monthly score'}
+          </small>
         </span>
         <ArrowRight size={19} />
       </button>
@@ -169,14 +189,15 @@ function RoundScreen({ round, index, total, score, level, onComplete, onNext }) 
         className="photo-frame interactive-photo-frame"
         role="button"
         tabIndex={answered ? -1 : 0}
+        aria-disabled={answered}
         aria-label={`Spot the defect in ${round.title}. Use the arrow keys to move the target, then press Enter to submit.`}
+        onClick={handleClick}
         onKeyDown={handleKeyDown}
       >
         <img
           ref={imageRef}
           src={round.photo_url}
           alt={`Inspection photograph: ${round.title}`}
-          onClick={handleClick}
           draggable="false"
           referrerPolicy="no-referrer"
         />
@@ -223,7 +244,7 @@ function RoundScreen({ round, index, total, score, level, onComplete, onNext }) 
       </div>
 
       {!answered ? (
-        <p className="instruction"><Clock size={16} /> Tap the photograph before time runs out.</p>
+        <p className="instruction"><Clock size={16} /> Tap, click or use the keyboard before time runs out.</p>
       ) : (
         <div className="answer-panel" aria-live="polite">
           <div className={`result-banner ${result.correct ? 'success' : 'failure'}`}>
@@ -245,35 +266,40 @@ function RoundScreen({ round, index, total, score, level, onComplete, onNext }) 
 }
 
 function GameReview({ challengeRounds, attempts }) {
-  const missed = challengeRounds.filter((round) => !attempts.find((attempt) => attempt.roundId === round.id)?.correct);
-  const found = challengeRounds.length - missed.length;
+  const found = attempts.filter((attempt) => attempt.correct).length;
+  const missed = challengeRounds.length - found;
 
   return (
     <section className="challenge-review" aria-labelledby="challenge-review-title">
       <div className="review-summary">
         <div><strong>{found}</strong><span>defects found</span></div>
-        <div><strong>{missed.length}</strong><span>defects missed</span></div>
+        <div><strong>{missed}</strong><span>defects missed</span></div>
       </div>
-      <h2 id="challenge-review-title">Review your challenge</h2>
-      {missed.length === 0 ? (
-        <p className="review-perfect">You found every defect in this challenge. Excellent work.</p>
-      ) : (
-        <div className="review-list">
-          {missed.map((round) => (
-            <details key={round.id} className="review-card">
+      <h2 id="challenge-review-title">Review every defect</h2>
+      <div className="review-list">
+        {challengeRounds.map((round) => {
+          const attempt = attempts.find((item) => item.roundId === round.id);
+          const correct = Boolean(attempt?.correct);
+          const resultLabel = correct ? 'Found' : attempt?.timedOut ? 'Timed out' : 'Missed';
+
+          return (
+            <details key={round.id} className={correct ? 'review-card review-card-found' : 'review-card review-card-missed'}>
               <summary>
-                <span className="review-status review-missed"><X size={16} /> Missed</span>
+                <span className={correct ? 'review-status review-found' : 'review-status review-missed'}>
+                  {correct ? <Check size={16} /> : <X size={16} />} {resultLabel}
+                </span>
                 <strong>{round.title}</strong>
               </summary>
-              <img src={round.photo_url} alt={`Missed defect: ${round.title}`} referrerPolicy="no-referrer" loading="lazy" />
+              <img src={round.photo_url} alt={`Inspection defect: ${round.title}`} referrerPolicy="no-referrer" loading="lazy" />
               <div>
                 <h3>{round.defect_label}</h3>
                 <p>{round.explanation}</p>
+                <p className="review-points">Your score for this defect: <strong>{attempt?.points || 0}/100</strong></p>
               </div>
             </details>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </section>
   );
 }
@@ -281,8 +307,18 @@ function GameReview({ challengeRounds, attempts }) {
 function ResultsScreen({ score, challengeRounds, attempts, level, challengeType, onRestart }) {
   const maximum = challengeRounds.length * 100;
   const percent = maximum ? Math.round((score / maximum) * 100) : 0;
+  const found = attempts.filter((attempt) => attempt.correct).length;
+  const accuracy = challengeRounds.length ? Math.round((found / challengeRounds.length) * 100) : 0;
   const rating = percent >= 80 ? 'Inspection Expert' : percent >= 50 ? 'Defect Spotter' : 'Homeowner in Training';
   const challengeLabel = challengeType === 'monthly' ? `${currentMonthlyChallenge().label} Challenge` : 'Full Challenge';
+  const bestKey = gameBestKey(challengeType, level.id);
+  const [previousBest] = useState(() => readStoredScore(bestKey));
+  const personalBest = Math.max(previousBest, score);
+  const isNewBest = score > previousBest;
+
+  useEffect(() => {
+    saveBestScore(bestKey, score);
+  }, [bestKey, score]);
 
   return (
     <section className="screen results-screen enhanced-results-screen">
@@ -292,6 +328,15 @@ function ResultsScreen({ score, challengeRounds, attempts, level, challengeType,
       <p className="quiz-result-category">{challengeLabel} · {level.label} level</p>
       <div className="final-score"><strong>{score}</strong><span>out of {maximum}</span></div>
       <p className="lead">You scored {percent}%. Real defects are often easier to miss than they first appear.</p>
+
+      <div className="result-meta-grid">
+        <div><strong>{found}/{challengeRounds.length}</strong><span>defects found</span></div>
+        <div><strong>{accuracy}%</strong><span>accuracy</span></div>
+        <div className={isNewBest ? 'new-best' : ''}>
+          <strong>{personalBest}</strong>
+          <span>{isNewBest ? 'new personal best' : 'personal best'}</span>
+        </div>
+      </div>
 
       <ShareResultButtons
         title={BRAND_NAME}
@@ -306,7 +351,7 @@ function ResultsScreen({ score, challengeRounds, attempts, level, challengeType,
         Check inspection availability <ArrowRight size={19} />
       </a>
       <button className="secondary-button" onClick={onRestart}>
-        <RotateCcw size={17} /> Play again
+        <RotateCcw size={17} /> Choose another challenge
       </button>
     </section>
   );
@@ -318,12 +363,12 @@ export default function GameApp() {
   const [score, setScore] = useState(0);
   const [levelId, setLevelId] = useState('siteManager');
   const [challengeType, setChallengeType] = useState('full');
-  const [challengeRounds, setChallengeRounds] = useState(rounds);
+  const [challengeRounds, setChallengeRounds] = useState(() => createFullChallenge());
   const [attempts, setAttempts] = useState([]);
   const level = LEVELS[levelId];
 
   const start = (type = challengeType) => {
-    const nextRounds = type === 'monthly' ? currentMonthlyChallenge().rounds : rounds;
+    const nextRounds = type === 'monthly' ? currentMonthlyChallenge().rounds : createFullChallenge();
     setChallengeType(type);
     setChallengeRounds(nextRounds);
     setAttempts([]);
