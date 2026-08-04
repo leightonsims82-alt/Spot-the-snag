@@ -34,7 +34,7 @@ function prepareImage(image) {
   image.dataset.mobileImageReady = 'true';
   image.dataset.sourceIndex = '0';
   image.classList.add('swsc-image-loading');
-  image.loading = 'eager';
+  image.loading = image.closest('.photo-frame') ? 'eager' : 'lazy';
   image.decoding = 'async';
   image.referrerPolicy = 'no-referrer';
 
@@ -49,7 +49,7 @@ function prepareImage(image) {
     if (nextIndex >= candidates.length) {
       image.classList.remove('swsc-image-loading');
       image.classList.add('swsc-image-failed');
-      image.closest('.photo-frame, .defect-preview-card')?.classList.add('swsc-frame-failed');
+      image.closest('.photo-frame, .defect-preview-card, .review-card')?.classList.add('swsc-frame-failed');
       return;
     }
 
@@ -68,7 +68,7 @@ function prepareImage(image) {
 }
 
 function prepareAllImages() {
-  document.querySelectorAll('.photo-frame img, .defect-preview-card img').forEach(prepareImage);
+  document.querySelectorAll('.photo-frame img, .defect-preview-card img, .review-card img').forEach(prepareImage);
 }
 
 const observer = new MutationObserver(prepareAllImages);
