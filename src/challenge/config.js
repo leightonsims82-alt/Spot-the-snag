@@ -74,6 +74,10 @@ export function currentMonthlyChallenge() {
   };
 }
 
+export function createFullChallenge() {
+  return shuffle(rounds);
+}
+
 export function createQuizSet(categoryId) {
   if (categoryId !== 'mixed') {
     return shuffle(quizQuestions.filter((question) => question.category === categoryId));
@@ -85,6 +89,37 @@ export function createQuizSet(categoryId) {
   const guaranteedIds = new Set(guaranteed.map((question) => question.id));
   const extras = shuffle(quizQuestions.filter((question) => !guaranteedIds.has(question.id))).slice(0, 2);
   return shuffle([...guaranteed, ...extras]);
+}
+
+export function gameBestKey(challengeType, levelId) {
+  if (challengeType === 'monthly') {
+    return `swsc:challenge-best:${currentMonthlyChallenge().key}:${levelId}`;
+  }
+  return `swsc:challenge-best:full:${levelId}`;
+}
+
+export function quizBestKey(categoryId) {
+  return `swsc:quiz-best:${categoryId}`;
+}
+
+export function readStoredScore(key) {
+  try {
+    const value = Number(window.localStorage.getItem(key));
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function saveBestScore(key, score) {
+  try {
+    const previous = readStoredScore(key);
+    const best = Math.max(previous, Number(score) || 0);
+    window.localStorage.setItem(key, String(best));
+    return best;
+  } catch {
+    return Number(score) || 0;
+  }
 }
 
 export function whyThisMatters(categoryId) {
