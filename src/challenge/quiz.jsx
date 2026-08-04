@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ArrowRight,
   BookOpen,
@@ -15,7 +15,15 @@ import {
 } from 'lucide-react';
 import { quizCategories } from '../questions.js';
 import ShareResultButtons from './share.jsx';
-import { BRAND_NAME, QUIZ_REVIEWED, createQuizSet, whyThisMatters } from './config.js';
+import {
+  BRAND_NAME,
+  QUIZ_REVIEWED,
+  createQuizSet,
+  quizBestKey,
+  readStoredScore,
+  saveBestScore,
+  whyThisMatters,
+} from './config.js';
 
 function categoryIcon(categoryId, size = 21) {
   if (categoryId === 'nhqc') return <ShieldCheck size={size} />;
@@ -25,6 +33,8 @@ function categoryIcon(categoryId, size = 21) {
 }
 
 function QuizStartScreen({ onStart }) {
+  const mixedBest = readStoredScore(quizBestKey('mixed'));
+
   return (
     <section className="screen quiz-start-screen">
       <div className="brand-mark">SWSC</div>
@@ -36,20 +46,26 @@ function QuizStartScreen({ onStart }) {
         <span className="mixed-icon"><BookOpen size={25} /></span>
         <span>
           <strong>Mixed Challenge</strong>
-          <small>10 questions across all four categories</small>
+          <small>
+            10 questions across all four categories
+            {mixedBest > 0 ? ` · Best ${mixedBest}/10` : ''}
+          </small>
         </span>
         <ArrowRight size={20} />
       </button>
 
       <div className="category-grid">
-        {quizCategories.map((category) => (
-          <button key={category.id} className="category-card" onClick={() => onStart(category.id)}>
-            <span className="category-icon">{categoryIcon(category.id)}</span>
-            <strong>{category.title}</strong>
-            <small>{category.description}</small>
-            <b>5 questions</b>
-          </button>
-        ))}
+        {quizCategories.map((category) => {
+          const best = readStoredScore(quizBestKey(category.id));
+          return (
+            <button key={category.id} className="category-card" onClick={() => onStart(category.id)}>
+              <span className="category-icon">{categoryIcon(category.id)}</span>
+              <strong>{category.title}</strong>
+              <small>{category.description}</small>
+              <b>{best > 0 ? `Best ${best}/5` : '5 questions'}</b>
+            </button>
+          );
+        })}
       </div>
 
       <a className="text-link" href="?">
@@ -157,21 +173,33 @@ function QuizReview({ questions, attempts }) {
         <p className="review-perfect">You answered every question correctly. Excellent work.</p>
       ) : (
         <div className="review-list">
-          {missed.map((question) => (
-            <details key={question.id} className="review-card quiz-review-card">
-              <summary>
-                <span className="review-status review-missed"><X size={16} /> Review</span>
-                <strong>{question.question}</strong>
-              </summary>
-              <div>
-                <p><strong>Correct answer:</strong> {question.options[question.correctIndex]}</p>
-                <p>{question.explanation}</p>
-                <a href={question.sourceUrl} target="_blank" rel="noreferrer">
-                  {question.sourceName} <ExternalLink size={14} />
-                </a>
-              </div>
-            </details>
-          ))}
+          {missed.map((question) => {
+            const attempt = attempts.find((item) => item.questionId === question.id);
+            const selectedAnswer = typeof attempt?.selectedIndex === 'number'
+              ? question.options[attempt.selectedIndex]
+              : 'No answer recorded';
+
+            return (
+              <details key={question.id} className="review-card quiz-review-card review-card-missed">
+                <summary>
+                  <span className="review-status review-missed"><X size={16} /> Review</span>
+                  <strong>{question.question}</strong>
+                </summary>
+                <div>
+                  <p><strong>Your answer:</strong> {selectedAnswer}</p>
+                  <p><strong>Correct answer:</strong> {question.options[question.correctIndex]}</p>
+                  <p>{question.explanation}</p>
+                  <div className="why-it-matters">
+                    <strong>Why this matters</strong>
+                    <p>{whyThisMatters(question.category)}</p>
+                  </div>
+                  <a href={question.sourceUrl} target="_blank" rel="noreferrer">
+                    {question.sourceName} <ExternalLink size={14} />
+                  </a>
+                </div>
+              </details>
+            );
+          })}
         </div>
       )}
     </section>
@@ -180,9 +208,18 @@ function QuizReview({ questions, attempts }) {
 
 function QuizResultsScreen({ score, total, categoryId, questions, attempts, onRestart, onChooseAgain }) {
   const percent = total ? Math.round((score / total) * 100) : 0;
+  const incorrect = total - score;
   const rating = percent >= 90 ? 'New Build Expert' : percent >= 70 ? 'Standards Savvy' : percent >= 50 ? 'Informed Homeowner' : 'Knowledge Under Construction';
   const category = quizCategories.find((item) => item.id === categoryId);
   const categoryLabel = categoryId === 'mixed' ? 'Mixed Challenge' : category?.title;
+  const bestKey = quizBestKey(categoryId);
+  const [previousBest] = useState(() => readStoredScore(bestKey));
+  const personalBest = Math.max(previousBest, score);
+  const isNewBest = score > previousBest;
+
+  useEffect(() => {
+    saveBestScore(bestKey, score);
+  }, [bestKey, score]);
 
   return (
     <section className="screen results-screen quiz-results-screen enhanced-results-screen">
@@ -192,6 +229,15 @@ function QuizResultsScreen({ score, total, categoryId, questions, attempts, onRe
       <p className="quiz-result-category">{categoryLabel}</p>
       <div className="final-score"><strong>{score}/{total}</strong><span>{percent}% correct</span></div>
       <p className="lead">Knowing the standards helps. Knowing how to identify and record visible defects throughout the finished home is where a professional inspection makes the difference.</p>
+
+      <div className="result-meta-grid">
+        <div><strong>{score}</strong><span>correct</span></div>
+        <div><strong>{incorrect}</strong><span>to review</span></div>
+        <div className={isNewBest ? 'new-best' : ''}>
+          <strong>{personalBest}/{total}</strong>
+          <span>{isNewBest ? 'new personal best' : 'personal best'}</span>
+        </div>
+      </div>
 
       <ShareResultButtons
         title={`${BRAND_NAME} Quiz`}
