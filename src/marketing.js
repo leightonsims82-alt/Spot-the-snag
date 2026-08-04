@@ -5,7 +5,7 @@ const CHECKLIST_URL = 'https://drive.google.com/file/d/1SzCwotwR3SzW3i9VQsUAoHhu
 
 function campaignUrl(url, content) {
   const separator = url.includes('?') ? '&' : '?';
-  return `${url}${separator}utm_source=spot_the_snag&utm_medium=interactive&utm_campaign=game_conversion&utm_content=${encodeURIComponent(content)}`;
+  return `${url}${separator}utm_source=challenge_the_inspector&utm_medium=interactive&utm_campaign=game_conversion&utm_content=${encodeURIComponent(content)}`;
 }
 
 function track(eventName, detail = {}) {
@@ -52,7 +52,7 @@ function upgradeResults(screen) {
   if (lead) {
     lead.textContent = isQuiz
       ? 'Knowing the standards helps, but a professional inspection checks the full property and records visible defects clearly for your developer.'
-      : 'This challenge contains 10 defects. A professional snagging inspection checks hundreds of visible components throughout your new home.';
+      : 'This challenge uses real defects from professional inspections. A full snagging inspection checks hundreds of visible components throughout your new home.';
   }
 
   if (existingPrimary) {
@@ -100,6 +100,18 @@ function bindInteractionTracking() {
     button.addEventListener('click', () => track('game_start'));
   });
 
+  document.querySelectorAll('.monthly-challenge-button:not([data-tracked])').forEach((button) => {
+    button.dataset.tracked = 'true';
+    button.addEventListener('click', () => track('monthly_challenge_start'));
+  });
+
+  document.querySelectorAll('.level-option:not([data-tracked])').forEach((button) => {
+    button.dataset.tracked = 'true';
+    button.addEventListener('click', () => track('difficulty_selected', {
+      level: button.querySelector('strong')?.textContent?.trim() || 'unknown',
+    }));
+  });
+
   document.querySelectorAll('.mixed-quiz-card:not([data-tracked])').forEach((button) => {
     button.dataset.tracked = 'true';
     button.addEventListener('click', () => track('quiz_start', { category: 'mixed' }));
@@ -128,6 +140,13 @@ function bindInteractionTracking() {
     link.dataset.tracked = 'true';
     link.addEventListener('click', () => track('reference_click', { source: link.textContent?.trim() || '' }));
   });
+
+  document.querySelectorAll('.share-result-actions button:not([data-tracked])').forEach((button) => {
+    button.dataset.tracked = 'true';
+    button.addEventListener('click', () => track('result_share_action', {
+      action: button.textContent?.trim() || 'unknown',
+    }));
+  });
 }
 
 function buildHomepageTeaser(screen) {
@@ -139,23 +158,30 @@ function buildHomepageTeaser(screen) {
 
   const hook = screen.querySelector('.landing-hook');
   const heading = screen.querySelector('h1');
+  const subtitle = screen.querySelector('.challenge-subtitle');
   const lead = screen.querySelector('.lead');
   const primary = screen.querySelector('.primary-button');
   const quizLink = screen.querySelector('a[href="?mode=quiz"]');
   const previewStrip = screen.querySelector('.defect-preview-strip');
+  const levelSelector = screen.querySelector('.level-selector');
+  const monthlyButton = screen.querySelector('.monthly-challenge-button');
 
   if (hook) hook.textContent = 'Interactive new-build challenge';
-  if (heading) heading.textContent = 'Could you spot what the builder missed?';
+  if (heading) heading.textContent = 'Challenge the Inspector';
+  if (subtitle) subtitle.textContent = 'Could you spot what the builder missed?';
   if (lead) lead.textContent = 'Try real defects found during professional snagging inspections, then test your technical new-build knowledge.';
+
+  if (levelSelector) levelSelector.remove();
+  if (monthlyButton) monthlyButton.remove();
 
   if (primary) {
     const playLink = createLink(
-      'Play Spot the Snag',
+      'Play Challenge the Inspector',
       campaignUrl(GAME_PAGE, 'homepage_teaser_play'),
       `${primary.className} homepage-teaser-primary`,
       'homepage_teaser_play'
     );
-    playLink.innerHTML = 'Play Spot the Snag <span aria-hidden="true">→</span>';
+    playLink.innerHTML = 'Play Challenge the Inspector <span aria-hidden="true">→</span>';
     primary.replaceWith(playLink);
   }
 
@@ -175,7 +201,7 @@ function buildHomepageTeaser(screen) {
   }
 
   const smallPrint = screen.querySelector('.small-print');
-  if (smallPrint) smallPrint.textContent = '10 real defects • 20 referenced technical questions';
+  if (smallPrint) smallPrint.textContent = 'Real inspection defects • Three difficulty levels • Referenced technical quiz';
 
   track('homepage_teaser_view');
 }
