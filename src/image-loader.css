@@ -1,5 +1,6 @@
 .photo-frame,
-.defect-preview-card {
+.defect-preview-card,
+.review-card {
   position: relative;
 }
 
@@ -13,7 +14,8 @@
 }
 
 .photo-frame::before,
-.defect-preview-card::before {
+.defect-preview-card::before,
+.review-card:has(> img)::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -27,7 +29,8 @@
 }
 
 .photo-frame:has(.swsc-image-loaded)::before,
-.defect-preview-card:has(.swsc-image-loaded)::before {
+.defect-preview-card:has(.swsc-image-loaded)::before,
+.review-card:has(.swsc-image-loaded)::before {
   display: none;
 }
 
@@ -45,7 +48,8 @@
 }
 
 .photo-frame img,
-.defect-preview-card img {
+.defect-preview-card img,
+.review-card > img {
   position: relative;
   z-index: 1;
 }
@@ -57,7 +61,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .photo-frame::before,
-  .defect-preview-card::before {
+  .defect-preview-card::before,
+  .review-card:has(> img)::before {
     animation: none;
   }
 
