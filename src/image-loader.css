@@ -1,0 +1,67 @@
+.photo-frame,
+.defect-preview-card {
+  position: relative;
+}
+
+.swsc-image-loading {
+  opacity: 0;
+}
+
+.swsc-image-loaded {
+  opacity: 1;
+  transition: opacity 180ms ease;
+}
+
+.photo-frame::before,
+.defect-preview-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    linear-gradient(100deg, rgba(255,255,255,0.025) 20%, rgba(225,189,104,0.08) 45%, rgba(255,255,255,0.025) 70%),
+    #090d13;
+  background-size: 220% 100%;
+  animation: swsc-image-pulse 1.4s linear infinite;
+  pointer-events: none;
+}
+
+.photo-frame:has(.swsc-image-loaded)::before,
+.defect-preview-card:has(.swsc-image-loaded)::before {
+  display: none;
+}
+
+.swsc-frame-failed::before {
+  content: 'Inspection image could not be loaded. Refresh to try again.';
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  color: #d9bd78;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  text-align: center;
+  background: #090d13;
+  animation: none;
+}
+
+.photo-frame img,
+.defect-preview-card img {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes swsc-image-pulse {
+  from { background-position: 120% 0; }
+  to { background-position: -120% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .photo-frame::before,
+  .defect-preview-card::before {
+    animation: none;
+  }
+
+  .swsc-image-loaded {
+    transition: none;
+  }
+}
