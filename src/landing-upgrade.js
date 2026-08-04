@@ -29,7 +29,7 @@ function buildPreviewStrip() {
   return strip;
 }
 
-function upgradeSnagLanding(screen) {
+function upgradeChallengeLanding(screen) {
   if (screen.dataset.premiumLanding === 'true') return;
   screen.dataset.premiumLanding = 'true';
   screen.classList.add('premium-landing');
@@ -42,17 +42,19 @@ function upgradeSnagLanding(screen) {
   const smallPrint = screen.querySelector('.small-print');
 
   if (heading && !screen.querySelector('.landing-hook')) {
-    heading.before(createElement('p', 'landing-hook', 'Think you could beat a professional inspector?'));
+    heading.before(createElement('p', 'landing-hook', 'Could you beat a professional snagging inspector?'));
   }
 
   if (lead) {
-    lead.textContent = 'Test your eye against real defects found during professional snagging inspections.';
-    const authority = createElement(
-      'p',
-      'authority-line',
-      'Built using genuine defects identified during professional new-build inspections across South Wales.'
-    );
-    lead.after(authority);
+    lead.textContent = 'Spot real defects from professional new-build inspections, race against the clock and see how your score compares.';
+
+    if (!screen.querySelector('.authority-line')) {
+      lead.after(createElement(
+        'p',
+        'authority-line',
+        'Built using genuine defects identified during professional inspections across South Wales.'
+      ));
+    }
   }
 
   if (stats) {
@@ -62,8 +64,7 @@ function upgradeSnagLanding(screen) {
       cards[0].querySelector('span').textContent = 'Real defects';
     }
     if (cards[1]) {
-      cards[1].querySelector('strong').textContent = '20 sec';
-      cards[1].querySelector('span').textContent = 'Default level';
+      cards[1].querySelector('span').textContent = 'Per round';
     }
     if (cards[2]) {
       cards[2].querySelector('strong').textContent = String(rounds.length * 100);
@@ -73,7 +74,7 @@ function upgradeSnagLanding(screen) {
 
   if (primaryButton) {
     primaryButton.classList.add('landing-primary-button');
-    primaryButton.innerHTML = '<span>Start Spot the Defect</span><span aria-hidden="true">→</span>';
+    primaryButton.innerHTML = '<span>Start Challenge the Inspector</span><span aria-hidden="true">→</span>';
   }
 
   if (quizLink) {
@@ -84,7 +85,7 @@ function upgradeSnagLanding(screen) {
       const note = createElement(
         'p',
         'quiz-cta-note',
-        'Test your knowledge of finishes, tolerances, defects and warranty-provider expectations.'
+        'Test your knowledge of finishes, tolerances, movement, weatherproofing and defect consequences.'
       );
       quizLink.after(note);
     }
@@ -97,7 +98,7 @@ function upgradeSnagLanding(screen) {
   }
 
   if (smallPrint) {
-    smallPrint.textContent = 'Choose your level, find the defects and share your score. Keyboard users can use the arrow keys and press Enter.';
+    smallPrint.textContent = 'Real defects. Three difficulty levels. Shareable results. Can you beat the inspector?';
   }
 }
 
@@ -110,7 +111,7 @@ function upgradeQuizLanding(screen) {
   const lead = screen.querySelector('.lead');
 
   if (heading && !screen.querySelector('.quiz-landing-hook')) {
-    heading.before(createElement('p', 'quiz-landing-hook', 'Part of Challenge the Inspector'));
+    heading.before(createElement('p', 'quiz-landing-hook', 'Challenge the Inspector'));
   }
 
   if (lead) {
@@ -120,14 +121,14 @@ function upgradeQuizLanding(screen) {
       lead.after(createElement(
         'p',
         'quiz-authority-line',
-        '20 referenced questions based on NHBC Standards and warranty-provider guidance.'
+        '20 referenced questions based on NHBC Standards and named warranty-provider guidance.'
       ));
     }
   }
 }
 
 function applyLandingUpgrades() {
-  document.querySelectorAll('.start-screen').forEach(upgradeSnagLanding);
+  document.querySelectorAll('.start-screen').forEach(upgradeChallengeLanding);
   document.querySelectorAll('.quiz-start-screen').forEach(upgradeQuizLanding);
 }
 
