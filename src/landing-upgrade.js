@@ -42,7 +42,7 @@ function upgradeSnagLanding(screen) {
   const smallPrint = screen.querySelector('.small-print');
 
   if (heading && !screen.querySelector('.landing-hook')) {
-    heading.before(createElement('p', 'landing-hook', 'Think you know a well-built home?'));
+    heading.before(createElement('p', 'landing-hook', 'Think you could beat a professional inspector?'));
   }
 
   if (lead) {
@@ -63,7 +63,7 @@ function upgradeSnagLanding(screen) {
     }
     if (cards[1]) {
       cards[1].querySelector('strong').textContent = '20 sec';
-      cards[1].querySelector('span').textContent = 'Per round';
+      cards[1].querySelector('span').textContent = 'Default level';
     }
     if (cards[2]) {
       cards[2].querySelector('strong').textContent = String(rounds.length * 100);
@@ -73,7 +73,7 @@ function upgradeSnagLanding(screen) {
 
   if (primaryButton) {
     primaryButton.classList.add('landing-primary-button');
-    primaryButton.innerHTML = '<span>Start Spot the Snag</span><span aria-hidden="true">→</span>';
+    primaryButton.innerHTML = '<span>Start Spot the Defect</span><span aria-hidden="true">→</span>';
   }
 
   if (quizLink) {
@@ -97,7 +97,7 @@ function upgradeSnagLanding(screen) {
   }
 
   if (smallPrint) {
-    smallPrint.textContent = '10 real defects. 20 seconds each. Can you spot them all?';
+    smallPrint.textContent = 'Choose your level, find the defects and share your score. Keyboard users can use the arrow keys and press Enter.';
   }
 }
 
@@ -110,7 +110,7 @@ function upgradeQuizLanding(screen) {
   const lead = screen.querySelector('.lead');
 
   if (heading && !screen.querySelector('.quiz-landing-hook')) {
-    heading.before(createElement('p', 'quiz-landing-hook', 'How good is your new-build knowledge?'));
+    heading.before(createElement('p', 'quiz-landing-hook', 'Part of Challenge the Inspector'));
   }
 
   if (lead) {
